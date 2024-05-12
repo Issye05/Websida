@@ -1,0 +1,58 @@
+{
+  "name": "NAME",
+  "version": "0.0.1",
+  "description": "DESCRIPTION",
+  "main": "dist/src/main.js",
+  "exports": "./dist/index.js",
+  "type": "module",
+  "bin": {
+    "COMMAND": "dist/src/main.js"
+  },
+  "directories": {
+    "test": "test",
+    "doc": "doc",
+    "dist": "dist"
+  },
+  "scripts": {
+    "setup": "npm install && npm run build",
+    "setup:unix": "npm run setup && chmod a+x dist/src/main.js",
+    "test": "mocha dist/test/ --reporter spec",
+    "build": "tsc && npm run fmt",
+    "watch": "tsc -w",
+    "doc": "typedoc src",
+    "fmt": "prettier -w --prose-wrap always --ignore-unknown -c '**/*'",
+    "publish": "npm run build && npm run test && npm publish",
+    "start": "node dist/src/main.js",
+    "dev": "nodemon node dist/main.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "GIT_PATH"
+  },
+  "bugs": {
+    "url": "ISSUES_URL"
+  },
+  "author": "AUTHOR",
+  "devDependencies": {
+    "@types/chai": "^4.3.9",
+    "@types/chai-string": "^1.4.4",
+    "@types/express": "^4.17.20",
+    "@types/fs-extra": "^11.0.3",
+    "@types/mocha": "^10.0.3",
+    "chai": "^4.3.10",
+    "chai-string": "^1.5.0",
+    "deep-eql": "^5.0.1",
+    "mocha": "^10.2.0",
+    "nodemon": "^3.0.1",
+    "prettier": "^3.0.3",
+    "ts-node": "^10.9.1",
+    "typedoc": "^0.25.3",
+    "typescript": "^5.2.2"
+  },
+  "dependencies": {
+    "@types/uuid": "^9.0.8",
+    "express": "^4.17.1",
+    "fs-extra": "^10.1.0",
+    "uuid": "^9.0.1"
+  }
+}
