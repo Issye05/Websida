@@ -27,7 +27,8 @@ ul {
   text-align: center;
 }
 
-a,button {
+a,
+button {
   display: inline-block;
   margin-top: 20px;
   padding: 10px 20px;
@@ -39,5 +40,4 @@ a,button {
 
 a:hover {
   background-color: #03f7ff;
-  }
-
+}
