@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="sv">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" type="text/css" href="css/base.css" />
+    <title>Lägg till fotbollslag</title>
+  </head>
+  <body>
+    <h1>Lägg till fotbollslag</h1>
+    <form action="/input" method="GET">
+      <label for="LagNamn">Lagets namn:</label>
+      <input type="text" id="LagNamn" name="LagNamn" required />
+      <br />
+      <label for="Ekonomi">Ekonomi:</label>
+      <input type="number" id="Ekonomi" name="Ekonomi" required />
+      <br />
+      <label for="ChampionsLeagueTrophies"
+        >Antal Champions League Trophies:</label
+      >
+      <input
+        type="number"
+        id="ChampionsLeagueTrophies"
+        name="ChampionsLeagueTrophies"
+        required
+      />
+      <br />
+      <label for="LigaTitlar">Antal Liga Titlar:</label>
+      <input type="number" id="LigaTitlar" name="LigaTitlar" required />
+      <br />
+      <button type="submit">Lägg till lag</button>
+    </form>
+  </body>
+</html>
