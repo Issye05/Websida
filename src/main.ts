@@ -1,12 +1,16 @@
 import express from "express";
-import mysql, { RowDataPacket, OkPacket } from "mysql2/promise";
+import mysql, { RowDataPacket } from "mysql2/promise";
 import crypto from "crypto";
 import { v4 as uuid } from "uuid";
-import cookie from "cookie-parser";
+import cookieParser from "cookie-parser";
 
 async function main() {
   const app = express();
-  app.use(cookie());
+  app.use(cookieParser());
+  app.use(express.json());
+
+  type TokenData = { [key: string]: string };
+  const token_storage: TokenData = {};
 
   const db = await mysql.createConnection({
     host: "localhost",
@@ -15,123 +19,98 @@ async function main() {
     database: "FotbollsLagDB",
   });
 
-  // GET-väg för att hämta lagens namn
-  app.get("/LagNamn", async function (req, res) {
+  app.use("/", express.static("public"));
+
+  // GET route to fetch football teams from the database
+  app.get("/FotbollsLagDB", async function (req, res) {
     try {
-      const question = "SELECT * FROM LagNamn;";
-      const result = await db.execute(question);
-      const data = result.values().next().value;
-      res.send(data);
+      const [rows] = await db.execute<RowDataPacket[]>("SELECT * FROM Lag;");
+      if (Array.isArray(rows)) {
+        let html = "<table border='1'>";
+        html +=
+          "<tr><th>Lag ID</th><th>Lag Namn</th><th>Ekonomi</th><th>Champions League Trophies</th><th>Liga Titlar</th></tr>";
+        rows.forEach((row) => {
+          html += "<tr>";
+          html += "<td>" + row.LagID + "</td>";
+          html += "<td>" + row.LagNamn + "</td>";
+          html += "<td>" + row.Ekonomi + "</td>";
+          html += "<td>" + row.ChampionsLeagueTrophies + "</td>";
+          html += "<td>" + row.LigaTitlar + "</td>";
+          html += "</tr>";
+        });
+        html += "</table>";
+        res.send(html);
+      } else {
+        throw new Error("No data returned from the query.");
+      }
     } catch (error) {
-      console.error("Error fetching team names:", error);
-      res.status(500).send("An error occurred while fetching team names.");
+      console.error("Error fetching football teams:", error);
+      res.status(500).send("An error occurred while fetching football teams.");
     }
   });
 
-  // GET-väg för att hantera inmatning
   app.get("/input", async function (req, res) {
-    try {
-      const FotbollsLagDB = req.query.FotbollsLagDB;
-      const LagNamn = "";
-      const Ekonomi = 0;
-      const ChampionsLeagueTrophies = 0;
-      const LigaTitlar = 0;
-      const question = "INSERT INTO msg VALUES (null, ?, ?, ?);";
-      const result = await db.execute(question, [
-        LagNamn,
-        Ekonomi,
-        ChampionsLeagueTrophies,
-        LigaTitlar,
-      ]);
-      res.send(FotbollsLagDB);
-    } catch (error) {
-      console.error("Error inserting data:", error);
-      res.status(500).send("An error occurred while inserting data.");
-    }
-  });
+    const { LagNamn, Ekonomi, ChampionsLeagueTrophies, LigaTitlar } = req.query;
 
-  app.use(express.json());
-  app.post("/reg", async (req: express.Request, res: express.Response) => {
-    try {
-      const { user, password } = req.body;
-      if (!user || !password) {
-        return res
-          .status(400)
-          .send("Du måste ange både användarnamn och lösenord.");
-      }
-      const [existingUser] = await db.execute(
-        "SELECT * FROM user WHERE name = ?",
-        [user],
-      );
-      if ((existingUser as RowDataPacket[]).length > 0) {
-        return res.status(400).send("Användarnamnet är redan upptaget.");
-      }
-      const hashedPassword = crypto
-        .createHash("md5")
-        .update(password)
-        .digest("hex");
-      await db.execute("INSERT INTO user (name, password) VALUES (?, ?)", [
-        user,
-        hashedPassword,
-      ]);
-      res.status(201).send("Konto skapat framgångsrikt.");
-    } catch (error) {
-      console.error("Error during registration:", error);
-      res.status(500).send("Ett fel inträffade under registreringen.");
-    }
-  });
+    if (LagNamn && Ekonomi && ChampionsLeagueTrophies && LigaTitlar) {
+      const question =
+        "INSERT INTO `Lag` (LagNamn, Ekonomi, ChampionsLeagueTrophies, LigaTitlar) VALUES (?, ?, ?, ?)";
 
-  app.get(
-    "/login",
-    async function (req: express.Request, res: express.Response) {
       try {
-        let count = 0;
-        type TokenData = { [key: string]: string };
-        const token_storage: TokenData = {};
+        await db.execute(question, [
+          LagNamn,
+          Ekonomi,
+          ChampionsLeagueTrophies,
+          LigaTitlar,
+        ]);
+        res.send("Data har lagts till i databasen!");
+      } catch (error) {
+        console.error("Error när data skulle läggas till i databasen:", error);
+        res
+          .status(500)
+          .send("Ett fel inträffade när data skulle läggas till i databasen.");
+      }
+    } else {
+      res.status(400).send("Alla parametrar måste vara definierade.");
+    }
+  });
 
-        console.log("Type of user:", typeof req.query.user);
-        console.log("Type of password:", typeof req.query.password);
-
-        const user_name = req.query.user as string;
-
-        if (req.query && typeof req.query.password === "string") {
-          const password = crypto
-            .createHash("md5")
-            .update(String(req.query.password))
-            .digest("hex");
-          let question = "SELECT name,password FROM user WHERE name =?";
-          console.log(user_name);
-          console.log(req.query.password);
-          console.log(db.format(question, [user_name]));
-          const [rows] = await db.execute(question, [user_name]);
-          const user_answer = rows as RowDataPacket[];
-          if (user_answer.length > 0) {
-            const password_from_database = user_answer[0]?.password;
-            console.log(password_from_database);
-            if (password_from_database === password) {
-              const token = uuid();
-              console.log(token);
-              token_storage[token] = user_name;
-              count = Number(req.cookies.count);
-              count++;
-              res.cookie("count", count, { maxAge: 10000000 });
-              res.cookie("login", token, { maxAge: 10000000 });
-              res.send("Rätt lösenord");
-            } else {
-              res.send("fel lösenord!");
-            }
-          } else {
-            res.send("Användaren hittades inte");
-          }
+  // GET route to handle login
+  app.get("/login", async function (req, res) {
+    if (
+      req.query &&
+      typeof req.query.user === "string" &&
+      typeof req.query.password === "string"
+    ) {
+      const user_name = req.query.user;
+      const password = crypto
+        .createHash("md5")
+        .update(String(req.query.password))
+        .digest("hex");
+      console.log("Username:", user_name);
+      console.log("Password Hash:", password);
+      const question = "SELECT name, password FROM user WHERE name = ?";
+      try {
+        const [rows] = await db.execute<RowDataPacket[]>(question, [user_name]);
+        console.log("DB Rows:", rows);
+        if (rows.length > 0 && rows[0].password === password) {
+          const token = uuid();
+          token_storage[token] = user_name;
+          res.cookie("login", token, { maxAge: 10000000 });
+          res.send("Du är inloggad!");
         } else {
-          res.send("Du har inte skrivit lösenord eller användarnamn");
+          res.send("Fel lösenord!");
         }
       } catch (error) {
-        console.error("Error during login:", error);
-        res.status(500).send("Ett fel inträffade vid inloggningen.");
+        console.error("Database query error:", error);
+        res
+          .status(500)
+          .send("Ett fel inträffade när användarinformation skulle hämtas.");
       }
-    },
-  );
+    } else {
+      res.send("Du har inte skrivit in ett användarnamn eller lösenord!");
+    }
+  });
 
   const port = 8080;
 
@@ -140,4 +119,6 @@ async function main() {
   });
 }
 
-main();
+main().catch((err) => {
+  console.error("Failed to start server:", err);
+});
